@@ -1,0 +1,23 @@
+version: "2.1"
+services:
+  ###################
+  # Druid #
+  ###################
+  docker-druid:
+    build: druid/
+    container_name: docker-druid
+    ports:
+      - 8081:8081
+      - 8082:8082
+  ######################
+  # Superset #
+  ######################
+  docker-superset:
+    build: superset/
+    container_name: docker-superset
+    ports:
+      - 8088:8088
+    depends_on:
+      - docker-druid
+    links:
+      - docker-druid:docker-druid
