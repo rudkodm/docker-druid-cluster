@@ -15,7 +15,7 @@ docker build -t rudkodm/druid:latest .
 Download and launch the docker image
 
 ```sh
-docker run --rm -i -p 3001:8081 -p 3002:8082 -p 3003:8083 rudkodm/druid:latest
+docker run --rm -i -p 8081:8081 -p 8082:8082 -p 8083:8083 rudkodm/druid:latest
 ```
 
 Wait a minute or so for Druid to start up and download the sample.
@@ -25,28 +25,32 @@ Wait a minute or so for Druid to start up and download the sample.
 
 List datasources
 ```sh
-curl "http://$(docker-machine ip default):3002/druid/v2/datasources"
+curl "http://$(docker-machine ip default):8082/druid/v2/datasources"
 ```
 
 Access the coordinator console
 ```sh
-open "http://$(docker-machine ip default):3001/"
+open "http://$(docker-machine ip default):8081/"
 ```
 
 Indexing
 ```sh
 # Using local file system firehos
-curl -X 'POST' -H 'Content-Type:application/json' -d @quickstart/wikiticker-index-local.json "http://$(docker-machine ip default):3001/druid/indexer/v1/task"
+curl -X 'POST' -H 'Content-Type:application/json' "http://$(docker-machine ip default):8081/druid/indexer/v1/task" -d @quickstart/wikiticker-index-local.json
 
 # Using Azure Blob firehose 
-curl -X 'POST' -H 'Content-Type:application/json' -d @quickstart/wikiticker-index-blob.json "http://$(docker-machine ip default):3001/druid/indexer/v1/task"
+curl -X 'POST' -H 'Content-Type:application/json' "http://$(docker-machine ip default):8081/druid/indexer/v1/task" -d @quickstart/wikiticker-index-blob.json
 ```
 
+Querying
+ ```sh
+ curl -X POST "http://$(docker-machine ip default):8082/druid/v2/?pretty" -H 'Content-Type:application/json' -d @quickstart/wikiticker-query-example.json
+ ```
 
 History Nodes:
 ```sh
-curl -X 'POST' -H 'Content-Type:application/json'  "hhttp://$(docker-machine ip default):3003/druid/historical/v1/loadstatus"
-curl -X 'POST' -H 'Content-Type:application/json'  "hhttp://$(docker-machine ip default):3003/druid/historical/v1/readiness"
+curl -X 'POST' -H 'Content-Type:application/json'  "hhttp://$(docker-machine ip default):8083/druid/historical/v1/loadstatus"
+curl -X 'POST' -H 'Content-Type:application/json'  "hhttp://$(docker-machine ip default):8083/druid/historical/v1/readiness"
 ```
 
 
@@ -56,7 +60,7 @@ curl -X 'POST' -H 'Content-Type:application/json'  "hhttp://$(docker-machine ip 
 You might want to look into the logs when debugging the Druid processes. This can be done by logging into the container using `docker ps`:
 ```
 CONTAINER ID        IMAGE                     COMMAND                  CREATED             STATUS              PORTS                                                                                                                      NAMES
-9e73cbfc5612        druidio/example-cluster   "/bin/sh -c 'export H"   7 seconds ago       Up 6 seconds        2181/tcp, 2888/tcp, 3306/tcp, 3888/tcp, 8083/tcp, 0.0.0.0:3001->8081/tcp, 0.0.0.0:3000->8082/tcp    sick_lamport
+9e73cbfc5612        druidio/example-cluster   "/bin/sh -c 'export H"   7 seconds ago       Up 6 seconds        2181/tcp, 2888/tcp, 3306/tcp, 3888/tcp, 8083/tcp, 0.0.0.0:8081->8081/tcp, 0.0.0.0:8082->8082/tcp    sick_lamport
 ```
 
 And attaching to the container using `docker exec -ti 9e73cbfc5612 bash` logs are written to `/tmp/`:

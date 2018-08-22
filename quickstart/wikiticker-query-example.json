@@ -1,0 +1,15 @@
+{
+  "queryType": "timeseries",
+  "dataSource": "wikiticker",
+  "granularity": "day",
+  "aggregations": [
+    {
+      "type": "longSum",
+      "name": "res",
+      "fieldName": "added"
+    }
+  ],
+  "intervals": [
+    "2015-01-01T00:00:00.000/2016-01-01T00:00:00.000"
+  ]
+}

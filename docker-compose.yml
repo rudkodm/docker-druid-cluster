@@ -1,7 +1,21 @@
-version: "2.1"
+version: '3.1'
 services:
   ###################
-  # Druid #
+  # Zookeeper
+  # https://github.com/31z4/zookeeper-docker
+  ###################
+
+  zookeper:
+    image: zookeeper:latest
+    restart: always
+    hostname: zoo1
+    ports:
+      - 2181:2181
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_SERVERS: server.1=0.0.0.0:2888:3888
+  ###################
+  # Druid
   ###################
   docker-druid:
     build: druid/
@@ -10,7 +24,8 @@ services:
       - 8081:8081
       - 8082:8082
   ######################
-  # Superset #
+  # Superset
+  # https://github.com/tylerFowler/docker-superset
   ######################
   docker-superset:
     build: superset/
