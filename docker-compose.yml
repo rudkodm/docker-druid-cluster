@@ -4,35 +4,57 @@ services:
   # Zookeeper
   # https://github.com/31z4/zookeeper-docker
   ###################
-
   zookeper:
     image: zookeeper:latest
     restart: always
-    hostname: zoo1
+    container_name: zookeeper
     ports:
       - 2181:2181
+      - 2888:2888
+      - 3888:3888
     environment:
       ZOO_MY_ID: 1
       ZOO_SERVERS: server.1=0.0.0.0:2888:3888
+
   ###################
   # Druid
   ###################
-  docker-druid:
+  druid:
     build: druid/
-    container_name: docker-druid
+    container_name: druid
     ports:
       - 8081:8081
       - 8082:8082
+    depends_on:
+      - zookeper
+    links:
+      - zookeper:zookeper
+    environment:
+      METADATA_DB_TYPE: sqlserver
+      METADATA_DB_URL: ${some db url};
+      METADATA_DB_USER: ${some user}
+      METADATA_DB_PASSWORD: ${some passwrod}
+      ZOOKEEPER_HOSTS: zookeeper
+      AZURE_ACCOUNT: ${some account}
+      AZURE_KEY: ${some key}
+      AZURE_CONTAINER: ${some container}
+
   ######################
   # Superset
   # https://github.com/tylerFowler/docker-superset
   ######################
-  docker-superset:
+  superset:
     build: superset/
-    container_name: docker-superset
+    container_name: superset
     ports:
       - 8088:8088
     depends_on:
-      - docker-druid
+      - druid
     links:
-      - docker-druid:docker-druid
+      - druid:druid
+
+###################
+  # Metastore
+  ###################
+
+  # Should be inicialize before

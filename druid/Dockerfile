@@ -1,7 +1,13 @@
 FROM ubuntu:14.04
 
-ENV DRUID_VERSION 0.12.1
-ENV ZOOKEEPER_VERSION 3.4.10
+ENV DRUID_VERSION '0.12.2'
+ENV DRUID_HOME '/usr/local/druid'
+ENV DRUID_LOGS '/var/lib/druid'
+ENV DRUID_TMP '/tmp/druid/'
+
+#####################
+# Environment Setup #
+#####################
 
 # Java 8
 RUN apt-get update \
@@ -11,28 +17,23 @@ RUN apt-get update \
       && apt-get update \
       && echo oracle-java-8-installer shared/accepted-oracle-license-v1-1 select true | /usr/bin/debconf-set-selections \
       && apt-get install -y oracle-java8-installer oracle-java8-set-default \
-                            mysql-server \
+                            gettext-base \
                             supervisor \
-                            git \
+                            nano \
+                            curl \
       && apt-get clean \
       && rm -rf /var/cache/oracle-jdk8-installer \
       && rm -rf /var/lib/apt/lists/*
 
-
-# Zookeeper
-RUN wget -q -O - "http://www.us.apache.org/dist/zookeeper/zookeeper-${ZOOKEEPER_VERSION}/zookeeper-${ZOOKEEPER_VERSION}.tar.gz" | tar -xzf - -C /usr/local \
-      && cp "/usr/local/zookeeper-${ZOOKEEPER_VERSION}/conf/zoo_sample.cfg" "/usr/local/zookeeper-${ZOOKEEPER_VERSION}/conf/zoo.cfg" \
-      && ln -s "/usr/local/zookeeper-${ZOOKEEPER_VERSION}" /usr/local/zookeeper
-
 # Druid
 RUN wget -q -O - "http://static.druid.io/artifacts/releases/druid-${DRUID_VERSION}-bin.tar.gz" | tar -xzf - -C /usr/local \
-  && ln -s "/usr/local/druid-${DRUID_VERSION}" /usr/local/druid \
+  && ln -s "/usr/local/druid-${DRUID_VERSION}" ${DRUID_HOME} \
   && adduser --system --group --no-create-home druid \
-  && mkdir -p "/var/lib/druid" \
-  && chown druid:druid "/var/lib/druid"
+  && wget -q -O - "https://github.com/Microsoft/mssql-jdbc/releases/download/v7.0.0/mssql-jdbc-7.0.0.jre8.jar" -O "${DRUID_HOME}/lib/mssql-jdbc-7.0.0.jre8.jar" \
+  && mkdir -p ${DRUID_LOGS} \
+  && chown druid:druid ${DRUID_LOGS}
 
-WORKDIR "/usr/local/druid/"
-
+WORKDIR ${DRUID_HOME}
 RUN java \
       -cp "lib/*" \
       -Ddruid.extensions.directory="extensions" \
@@ -40,25 +41,7 @@ RUN java \
       io.druid.cli.Main tools pull-deps \
       -d ${DRUID_VERSION} \
       -c "io.druid.extensions.contrib:druid-azure-extensions" \
-      -c "io.druid.extensions:mysql-metadata-storage"
-
-# Setup metadata store and add sample data
-RUN find /var/lib/mysql -type f -exec touch {} \; \
-      && /etc/init.d/mysql start \
-      && mysql -u root -e "GRANT ALL ON druid.* TO 'druid'@'localhost' IDENTIFIED BY 'druid'; CREATE database druid CHARACTER SET utf8;" \
-      && java \
-          -cp "/usr/local/druid/lib/*" \
-          -Ddruid.extensions.directory="/usr/local/druid/extensions" \
-          -Ddruid.extensions.hadoopDependenciesDir="/usr/local/druid/hadoop-dependencies" \
-          -Ddruid.extensions.loadList=[\"mysql-metadata-storage\",\"druid-azure-extensions\"] \
-          -Ddruid.metadata.storage.type=mysql \
-          io.druid.cli.Main tools metadata-init \
-              --connectURI="jdbc:mysql://localhost:3306/druid" \
-              --user="druid" --password="druid" \
-      && /etc/init.d/mysql stop
-
-# Setup supervisord
-ADD supervisord.conf "/etc/supervisor/conf.d/supervisord.conf"
+      -c "io.druid.extensions.contrib:sqlserver-metadata-storage"
 
 # Cleanup
 RUN apt-get clean \
@@ -68,19 +51,35 @@ RUN apt-get clean \
     "/var/cache/oracle-jdk8-installer" \
     "/var/lib/apt/lists/*"
 
+
+#############################
+# Environment Configuration #
+#############################
+
+ENV AZURE_ACCOUNT ''
+ENV AZURE_KEY ''
+ENV AZURE_CONTAINER ''
+
+ENV METADATA_DB_TYPE 'type'
+ENV METADATA_DB_URL 'jdbc:mysql://localhost:3306/druid'
+ENV METADATA_DB_USER 'druid'
+ENV METADATA_DB_PASSWORD 'druid'
+
+ENV ZOOKEEPER_HOSTS 'localhost'
+
+COPY supervisord.conf "/etc/supervisor/conf.d/supervisord.conf"
+
 # Expose ports:
 # - 8081: HTTP (coordinator)
 # - 8082: HTTP (broker)
 # - 8083: HTTP (historical)
 # - 8090: HTTP (overlord)
-# - 3306: MySQL
-# - 2181 2888 3888: ZooKeeper
+
 EXPOSE 8081
 EXPOSE 8082
 EXPOSE 8083
 EXPOSE 8090
-EXPOSE 3306
-EXPOSE 2181 2888 3888
+EXPOSE 22
 
-WORKDIR "/var/lib/druid"
-ENTRYPOINT export HOSTIP="$(resolveip -s $HOSTNAME)" && find /var/lib/mysql -type f -exec touch {} \; && exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+WORKDIR ${DRUID_LOGS}
+ENTRYPOINT export HOSTIP="$(resolveip -s $HOSTNAME)" && exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf

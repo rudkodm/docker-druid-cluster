@@ -1,3 +1,6 @@
+# Any secrets
+**/secrets.*
+
 # Any logs
 **/*.log
 
