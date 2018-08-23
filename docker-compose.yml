@@ -31,13 +31,13 @@ services:
       - zookeper:zookeper
     environment:
       METADATA_DB_TYPE: sqlserver
-      METADATA_DB_URL: ${some db url};
-      METADATA_DB_USER: ${some user}
-      METADATA_DB_PASSWORD: ${some passwrod}
-      ZOOKEEPER_HOSTS: zookeeper
-      AZURE_ACCOUNT: ${some account}
-      AZURE_KEY: ${some key}
-      AZURE_CONTAINER: ${some container}
+      METADATA_DB_URL: ${replace_with_actual_value}
+      METADATA_DB_USER: ${replace_with_actual_value}
+      METADATA_DB_PASSWORD: ${replace_with_actual_value}
+      ZOOKEEPER_HOSTS: ${replace_with_actual_value}
+      AZURE_ACCOUNT: ${replace_with_actual_value}
+      AZURE_KEY: ${replace_with_actual_value}
+      AZURE_CONTAINER: ${replace_with_actual_value}
 
   ######################
   # Superset

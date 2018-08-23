@@ -1,0 +1,110 @@
+version: '3.1'
+services:
+  ###################
+  # Zookeeper
+  # https://github.com/31z4/zookeeper-docker
+  ###################
+  zookeper:
+    image: zookeeper:latest
+    restart: always
+    container_name: zookeeper
+    ports:
+      - 2181:2181
+      - 2888:2888
+      - 3888:3888
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_SERVERS: server.1=0.0.0.0:2888:3888
+
+  ###################
+  # Coordinator
+  ###################
+  coordinator:
+    build: druid/
+    container_name: coordinator
+    ports:
+      - 8081:8081
+      - 8090:8090
+    depends_on:
+      - zookeper
+    links:
+      - zookeper:zookeper
+    environment:
+      NODE_TYPE: coordinator
+      METADATA_DB_TYPE: sqlserver
+      METADATA_DB_URL: ${replace_with_actual_value}
+      METADATA_DB_USER: ${replace_with_actual_value}
+      METADATA_DB_PASSWORD: ${replace_with_actual_value}
+      ZOOKEEPER_HOSTS: ${replace_with_actual_value}
+      AZURE_ACCOUNT: ${replace_with_actual_value}
+      AZURE_KEY: ${replace_with_actual_value}
+      AZURE_CONTAINER: ${replace_with_actual_value}
+
+  ###################
+  # Historical
+  ###################
+  historical:
+    build: druid/
+    container_name: historical
+    ports:
+      - 8083:8083
+    depends_on:
+      - zookeper
+    links:
+      - zookeper:zookeper
+    environment:
+      NODE_TYPE: historical
+      METADATA_DB_TYPE: sqlserver
+      METADATA_DB_URL: ${replace_with_actual_value}
+      METADATA_DB_USER: ${replace_with_actual_value}
+      METADATA_DB_PASSWORD: ${replace_with_actual_value}
+      ZOOKEEPER_HOSTS: ${replace_with_actual_value}
+      AZURE_ACCOUNT: ${replace_with_actual_value}
+      AZURE_KEY: ${replace_with_actual_value}
+      AZURE_CONTAINER: ${replace_with_actual_value}
+
+  ###################
+  # Broker
+  ###################
+  broker:
+    build: druid/
+    container_name: broker
+    ports:
+      - 8082:8082
+    depends_on:
+      - zookeper
+    links:
+      - zookeper:zookeper
+    environment:
+      NODE_TYPE: broker
+      METADATA_DB_TYPE: sqlserver
+      METADATA_DB_URL: ${replace_with_actual_value}
+      METADATA_DB_USER: ${replace_with_actual_value}
+      METADATA_DB_PASSWORD: ${replace_with_actual_value}
+      ZOOKEEPER_HOSTS: ${replace_with_actual_value}
+      AZURE_ACCOUNT: ${replace_with_actual_value}
+      AZURE_KEY: ${replace_with_actual_value}
+      AZURE_CONTAINER: ${replace_with_actual_value}
+
+  ######################
+  # Superset
+  # https://github.com/tylerFowler/docker-superset
+  ######################
+  superset:
+    build: superset/
+    container_name: superset
+    ports:
+      - 8088:8088
+    depends_on:
+      - coordinator
+      - historical
+      - broker
+    links:
+      - broker:broker
+      - coordinator:coordinator
+
+###################
+  # Metastore
+  ###################
+
+  # Should be inicialize before

@@ -56,18 +56,21 @@ RUN apt-get clean \
 # Environment Configuration #
 #############################
 
+ENV NODE_TYPE 'single'
 ENV AZURE_ACCOUNT ''
 ENV AZURE_KEY ''
 ENV AZURE_CONTAINER ''
-
 ENV METADATA_DB_TYPE 'type'
 ENV METADATA_DB_URL 'jdbc:mysql://localhost:3306/druid'
 ENV METADATA_DB_USER 'druid'
 ENV METADATA_DB_PASSWORD 'druid'
-
 ENV ZOOKEEPER_HOSTS 'localhost'
 
-COPY supervisord.conf "/etc/supervisor/conf.d/supervisord.conf"
+COPY supervisord-single.conf "/etc/supervisor/conf.d/supervisord-single.conf"
+COPY supervisord-broker.conf "/etc/supervisor/conf.d/supervisord-broker.conf"
+COPY supervisord-historical.conf "/etc/supervisor/conf.d/supervisord-historical.conf"
+COPY supervisord-coordinator.conf "/etc/supervisor/conf.d/supervisord-coordinator.conf"
+COPY log4j2.xml "$DRUID_HOME/conf/druid/_common/log4j2.xml"
 
 # Expose ports:
 # - 8081: HTTP (coordinator)
@@ -82,4 +85,5 @@ EXPOSE 8090
 EXPOSE 22
 
 WORKDIR ${DRUID_LOGS}
-ENTRYPOINT export HOSTIP="$(resolveip -s $HOSTNAME)" && exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+ENTRYPOINT export HOSTIP="$(resolveip -s $HOSTNAME)" \
+        && exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord-${NODE_TYPE}.conf
