@@ -51,12 +51,19 @@ RUN apt-get clean \
     "/var/cache/oracle-jdk8-installer" \
     "/var/lib/apt/lists/*"
 
-
 #############################
 # Environment Configuration #
 #############################
 
-ENV NODE_TYPE 'single'
+COPY conf/supervisord "/etc/supervisor/conf.d/"
+COPY conf/druid "${DRUID_HOME}/conf/druid/"
+COPY bin "${DRUID_HOME}/bin"
+
+ENV PATH "${DRUID_HOME}/bin:${PATH}"
+ENV DRUID_NODE_TYPE 'single'
+ENV DRUID_NODE_IP 'localhost'
+ENV DRUID_NODE_PORT '8081'
+ENV ZOOKEEPER_HOSTS 'localhost'
 ENV AZURE_ACCOUNT ''
 ENV AZURE_KEY ''
 ENV AZURE_CONTAINER ''
@@ -64,13 +71,9 @@ ENV METADATA_DB_TYPE 'type'
 ENV METADATA_DB_URL 'jdbc:mysql://localhost:3306/druid'
 ENV METADATA_DB_USER 'druid'
 ENV METADATA_DB_PASSWORD 'druid'
-ENV ZOOKEEPER_HOSTS 'localhost'
+ENV INDEXER_LOGS_CONTAINER 'druid-logs'
+ENV INDEXER_LOGS_PREFIX 'indexer'
 
-COPY supervisord-single.conf "/etc/supervisor/conf.d/supervisord-single.conf"
-COPY supervisord-broker.conf "/etc/supervisor/conf.d/supervisord-broker.conf"
-COPY supervisord-historical.conf "/etc/supervisor/conf.d/supervisord-historical.conf"
-COPY supervisord-coordinator.conf "/etc/supervisor/conf.d/supervisord-coordinator.conf"
-COPY log4j2.xml "$DRUID_HOME/conf/druid/_common/log4j2.xml"
 
 # Expose ports:
 # - 8081: HTTP (coordinator)
@@ -82,8 +85,11 @@ EXPOSE 8081
 EXPOSE 8082
 EXPOSE 8083
 EXPOSE 8090
-EXPOSE 22
+
+#############################
+# Run Container #
+#############################
 
 WORKDIR ${DRUID_LOGS}
-ENTRYPOINT export HOSTIP="$(resolveip -s $HOSTNAME)" \
-        && exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord-${NODE_TYPE}.conf
+ENTRYPOINT envsubst.sh ${DRUID_HOME}/conf/druid/ \
+        && exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord-${DRUID_NODE_TYPE}.conf
